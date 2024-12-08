@@ -8,6 +8,11 @@ frequencies.remove('.')
 Nmax = len(np.diag(arr))**2
 X,Y = np.meshgrid(np.arange(arr.shape[0]),np.arange(arr.shape[1]))
 
+def is_outside(loc):
+    if loc[0] < 0 or loc[0] >= arr.shape[0] or loc[1] < 0 or loc[1] >= arr.shape[1]:
+        return True
+    return False
+
 antinodes_x2 = set()
 antinodes_all = set()
 for f in frequencies:
@@ -19,32 +24,30 @@ for f in frequencies:
             if loc1 == loc2:
                 continue
 
-            # l2 - (l1 - l2) so delta from l2 to l1 and then backwards from l2
-            antinode = (loc2[0] - loc1[0] + loc2[0], loc2[1] - loc1[1] + loc2[1])
-            if antinode[0] < 0 or antinode[0] >= arr.shape[0] or antinode[1] < 0 or antinode[1] >= arr.shape[1]:
+            l1 = np.array(list(loc1))
+            l2 = np.array(list(loc2))
+            delta = l1 - l2
+            antinode = l2 - delta
+
+            if is_outside(antinode):
                 continue
-            antinodes_x2.add(antinode)
+            antinodes_x2.add(tuple(antinode))
 
-            (dx,dy) = (loc2[0]-loc1[0],loc2[1]-loc1[1])
-
-            stp = np.gcd.reduce([dx,dy])
+            stp = np.gcd.reduce(delta)
             if stp != 0:
-                (dx,dy) = (dx//stp,dy//stp)
+                delta = delta//stp
             
             for i in range(0,Nmax):
-                l3x = i*dx+loc2[0]
-                l3y = i*dy+loc2[1]
-                if l3x >= arr.shape[0] or l3y >= arr.shape[1] or l3x < 0 or l3y < 0:
-                    break
-                antinodes_all.add((l3x,l3y))
+                l3 = l2 + i*delta
+                if not is_outside(l3):
+                    antinodes_all.add(tuple(l3))
+                
+                l3n = l2 - i*delta
+                if not is_outside(l3n):
+                    antinodes_all.add(tuple(l3n))
 
-            for i in range(0,-Nmax,-1):
-                l3x = i*dx+loc2[0]
-                l3y = i*dy+loc2[1]
-                if l3x >= arr.shape[0] or l3y >= arr.shape[1] or l3x < 0 or l3y < 0:
+                if is_outside(l3) and is_outside(l3n):
                     break
-                antinodes_all.add((l3x,l3y))
-
 
 print(len(antinodes_x2))
 print(len(antinodes_all))
