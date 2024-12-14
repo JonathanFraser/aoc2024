@@ -25,26 +25,28 @@ values.append(val)
 
 weights = np.array([3,1],dtype=int)
 def compute_cost(ainc,binc,prize):
-
-
     M = np.matrix([ainc,binc]).T 
     if np.linalg.matrix_rank(M) < 2:
         print("EXPLOSION")
         print(M)
-        quit()
+        #this never triggers so there isn't a "minimum" solution, only one solution.
+        # if this triggered then the a and b buttons would be multiples of each other
+        # we'd need to come p with the minimal cost solution for just X and then check that 
+        # it's also valid for Y
+        quit()  
 
     presses = np.linalg.solve(M,prize)
     if np.any(presses < 0):
         return (None,0)
 
+    # inverses are unique so just check if the solution is an int 
+    # by rounding it and then checking the forward solution
     press_int = np.round(presses).astype(dtype=int)
     match = np.all(M@press_int == prize)
     if match:
         return (press_int,3*press_int[0]+press_int[1])
 
     return (None,0)
-
-
 
 min_cost = 0 
 farther_cost = 0 
