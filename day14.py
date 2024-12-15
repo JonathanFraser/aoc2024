@@ -37,14 +37,20 @@ print(sector_count.prod())
 
 # Part 2
 for s in range(0,101*103):
-    arr = np.zeros((grid_size[0],grid_size[1]),dtype=str)
+    arr = np.zeros((grid_size[1],grid_size[0]),dtype=str)
     arr[:,:] = "."
     for b in bots:
         (bp,bv) = b
         bf = (bp + bv*s) % grid_size
-        arr[bf[0],bf[1]] = "*"
+        arr[bf[1],bf[0]] = "*"
     
+    found = False
     for a in arr:
         l = "".join(a)
         if "**********" in l:
+            found = True
+            break
+    if found:
             print(s)
+            print("".join(["".join(a) + "\n" for a in arr]))
+            
