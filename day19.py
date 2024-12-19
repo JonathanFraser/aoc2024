@@ -1,4 +1,4 @@
- options_count = 0 
+options_count = 0 
 matching = 0 
 
 with open('inputs/day19.txt') as f:
@@ -20,8 +20,3 @@ with open('inputs/day19.txt') as f:
 
 print(matching)
 print(options_count)
-
-        
-
-
-
