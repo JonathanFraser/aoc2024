@@ -1,129 +1,129 @@
+from helper import Point 
+from typing import Dict 
+from itertools import permutations
 
-num_keys = ['0', '1', '2', '3', '4', '5', '6', '7' ,'8','9','A']
-dir_keys = ["<",">","^","v","A"]
+class KeyPad():
+    a_pos : Point = None 
+    keys : Dict[str,Point] = {}
+    blacklist :Point=None
 
-dir_keys_direction = {
-    ("^",">") : "A",
-    ("^", "v") : "v",
-    ("<", ">") : "v",
-    ("v", ">") : ">",
-    ("v", "<") : "<", 
-    ("v", "^") : "^", 
-    (">", "^") : "A", 
-    (">", "<") : "v", 
-    ("A", "<") : "^", 
-    ("A", "v") : ">"
-}
+    def __init__(self):
+        pass
 
-num_keys_direction = {
-    ("0","^") : "2",
-    ("0",">") : "A",
-    ("A", "<"): "0",
-    ("A", "^"): "3", 
-    ("1", "^"):"4",
-    ("1", ">"): "2", 
-    ("2", "^"):"5",
-    ("2", ">"): "3",
-    ("2", "<"): "1",
-    ("2", "v"): "0",
-    ("3", "^"):"6",
-    ("3", "<"): "2",
-    ("3", "v"): "A",
-    ("4", "^"):"7",
-    ("4", ">"): "5",
-    ("4", "v"): "2",
-    ("5", "^"):"8",
-    ("5", ">"): "6",
-    ("5", "<"): "4",
-    ("5", "v"): "2",
-    ("6", "^"):"9",
-    ("6", "<"): "5",
-    ("6", "v"): "3",
-    ("7", ">"): "8",
-    ("7", "v"): "4",
-    ("8", ">"): "9",
-    ("8", "<"): "7",
-    ("8", "v"): "5",
-    ("9", "<"): "8",
-    ("9", "v"): "6"
-}
+    def set_home(self):
+        self.a_pos = self.keys["A"]
 
+    def get_paths(self,start,end):
+        target_loc : Point = self.keys[end]
+        start_pos : Point = self.keys[start] 
 
-import scipy.sparse as sp 
+        xdelta = target_loc.x - start_pos.x
+        ydelta = target_loc.y - start_pos.y 
 
-def strings(): 
-    for n in range(0,1000):
-        t = str(n).zfill(3) + "A"
-        for i in range(1,5):
-            yield t[:i]
+        moves = ""
+        if xdelta > 0:
+            moves += ">"*abs(xdelta)
+        else: 
+            moves += "<"*abs(xdelta)
 
-    yield ""
+        if ydelta > 0: 
+            moves += "v"*abs(ydelta)
+        else:
+            moves += "^"*abs(ydelta)
 
-n = []
-back_scatter = {}
-for pad2 in dir_keys:
-    for pad3 in dir_keys:
-        for pad4 in num_keys: 
-            for s in strings():
-                back_scatter[(pad2,pad3,pad4,s)] = len(n)
-                n.append((pad2,pad3,pad4,s))
+        seen = set()
+        for p in permutations(moves):
+            mstr = "".join(p)
+            if mstr in seen:
+                continue 
+            seen.add(mstr)
+            curr_loc = start_pos
+            for m in p:
+                curr_loc = curr_loc.move(m)
+                if curr_loc == self.blacklist:
+                    break
+            if curr_loc != target_loc:
+                continue 
 
-mat = sp.lil_matrix((len(n),len(n)),dtype=int)
-for (pad2,pad3,pad4,s) in n: 
-    i = back_scatter[(pad2,pad3,pad4,s)]
-    for user_pad_entry in ["<",">","^","v"]:
-        if (pad2,user_pad_entry) not in dir_keys_direction:
-            continue
+            yield mstr+"A"
 
-        new_pad2 = dir_keys_direction[(pad2,user_pad_entry)]
-        j = back_scatter[(new_pad2,pad3,pad4,s)]
-        mat[i,j] = 1
+class NumPad(KeyPad):
+    def __init__(self):
+        super(KeyPad).__init__()
+        self.keys = {
+            "0": Point(1,3),
+            "1": Point(0,2),
+            "2": Point(1,2),
+            "3": Point(2,2),
+            "4": Point(0,1),
+            "5": Point(1,1),
+            "6": Point(2,1),
+            "7": Point(0,0),
+            "8": Point(1,0),
+            "9": Point(2,0),
+            "A": Point(2,3)
+        }
+        self.blacklist = Point(0,3)
+        self.set_home()
 
-    #for user pad entry A 
-    if pad2 != "A":
-        if (pad3,pad2) not in dir_keys_direction:
-            continue
-
-        new_pad3 = dir_keys_direction[(pad3,pad2)]
-        j = back_scatter[(pad2,new_pad3,pad4,s)]
-        mat[i,j] = 1
-        continue
-
-    if pad3 != "A":
-        if (pad4,pad3) not in num_keys_direction:
-            continue
-
-        new_pad4 = num_keys_direction[(pad4,pad3)]
-        j = back_scatter[(pad2,pad3,new_pad4,s)]
-        
-        mat[i,j] = 1
-        continue
-
-    new_code = s+pad4
-    if (pad2,pad3,pad4,new_code) not in back_scatter:
-        continue
-
-    j = back_scatter[(pad2,pad3,pad4,new_code)]
-    mat[i,j] = 1
+class DirPad(KeyPad):
+    def __init__(self):
+        super(KeyPad).__init__()
+        self.keys = {
+            ">": Point(2,1),
+            "<": Point(0,1),
+            "v": Point(1,1),
+            "^": Point(1,0),
+            "A": Point(2,0)
+        }
+        self.blacklist = Point(0,0)
+        self.set_home()
 
 
-start_pt = ("A","A","A","")
-startn = back_scatter[start_pt]
+def get_shortest_seq(sequence,depth=0,cache = {}):
+    d = DirPad()
+ 
+    if depth == 0:
+        return len(sequence)
+    
+    if (sequence,depth) in cache:
+        return cache[(sequence,depth)]
 
-dists,pred,sources = sp.csgraph.dijkstra(mat,indices=startn,min_only=True,return_predecessors=True)
+    retval = 0
+    for (f,t) in zip("A"+sequence,sequence):
+        min_len = float("inf")
+        for path in d.get_paths(f,t):
+            seq_len = get_shortest_seq(path,depth-1)
+            if seq_len < min_len:
+                min_len = seq_len
+        retval += min_len
+    cache[(sequence,depth)] = retval
+    return retval
 
+def  get_input_code(sequence,depth=0,cache = {}):
+    n = NumPad()
+    retval = 0
+    for (f,t) in zip("A"+sequence,sequence):
+        min_len = float("inf")
+        for p in n.get_paths(f,t):
+            seq_len = get_shortest_seq(p,depth=depth,cache=cache)
+            if seq_len < min_len:
+                min_len = seq_len
+        retval += min_len
+    
+    return retval
+    
 complexity = 0 
-with open("inputs/day21_test1.txt") as f:
+complexity2 = 0 
+with open('inputs/day21.txt') as f:
     for l in f:
-        input = l.strip()
-        endn = back_scatter[("A","A","A",input)]
-        distn = round(dists[endn])
-        valuen = int(input[:-1])
-        print(input,distn,valuen)
-        complexity += distn*valuen
-
+        k = l.strip()
+        cache = {}
+        num = int(k[:-1])
+        min_seq = get_input_code(k,depth=2,cache=cache)
+        min_seq2 = get_input_code(k,depth=25,cache=cache)
+        complexity += num*min_seq
+        complexity2 += num*min_seq2
 
 print(complexity)
-
-
-                
+print(complexity2)
